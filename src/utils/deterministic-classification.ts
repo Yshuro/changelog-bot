@@ -95,11 +95,6 @@ const CHANGE_LIKE_INDICATORS = [
   'fine-tune',
   'fine tune',
   'finetune',
-  'deduplicate',
-  'deduplication',
-  'code reuse',
-  'refactor',
-  'refactoring',
 ];
 
 // WHY: Only version-only release and publish titles identify automation. Anchoring
@@ -150,11 +145,22 @@ const EXTRACT_FUNCTION_OR_LOGIC_RE =
 const REUSE_LOGIC_RE =
   /\b(?:reus(?:e|ed|ing|able)|code\s+reuse)\b.*?\b(?:logic|helper|function|utility|util|method|predicate|guard|implementation)s?\b/i;
 
-const REDUCE_DUPLICATION_RE =
-  /\b(?:reduc(?:e|ed|ing)|avoid(?:s|ed|ing)?|remov(?:e|ed|ing)|eliminat(?:e|ed|ing)|prevent(?:s|ed|ing)?)\b.*?\b(?:duplicated?|(?:code|logic)\s+duplication|(?:de)?duplication)\b/i;
+const INTERNAL_OR_REUSE_CONTEXT =
+  '(?:helpers?|utilities|utility|utils?|functions?|methods?|logics?|code|implementations?|routines?|predicates?|guards?|diagnostics?|formatting|internal|private|shared|reusable|reuse)';
 
-const DEDUPLICATION_INTENT_RE =
-  /\b(?:deduplicat(?:e|ed|ing|ion)|(?:code|logic)\s+duplication)\b/i;
+const REDUCE_DUPLICATION_RE = new RegExp(
+  `\\b(?:reduc(?:e|ed|ing)|avoid(?:s|ed|ing)?|remov(?:e|ed|ing)|eliminat(?:e|ed|ing)|prevent(?:s|ed|ing)?)\\b.*?\\b(?:duplicated?|(?:code|logic)\\s+duplication|(?:de)?duplication)\\b.*?\\b${INTERNAL_OR_REUSE_CONTEXT}\\b|` +
+    `\\b${INTERNAL_OR_REUSE_CONTEXT}\\b.*?\\b(?:reduc(?:e|ed|ing)|avoid(?:s|ed|ing)?|remov(?:e|ed|ing)|eliminat(?:e|ed|ing)|prevent(?:s|ed|ing)?)\\b.*?\\b(?:duplicated?|(?:code|logic)\\s+duplication|(?:de)?duplication)\\b|` +
+    `\\b(?:reduc(?:e|ed|ing)|avoid(?:s|ed|ing)?|remov(?:e|ed|ing)|eliminat(?:e|ed|ing)|prevent(?:s|ed|ing)?)\\b.*?\\b(?:code|logic)\\s+(?:de)?duplication\\b`,
+  'i',
+);
+
+const DEDUPLICATION_INTENT_RE = new RegExp(
+  `\\b(?:deduplicat(?:e|ed|ing|ion))\\b.*?\\b${INTERNAL_OR_REUSE_CONTEXT}\\b|` +
+    `\\b${INTERNAL_OR_REUSE_CONTEXT}\\b.*?\\b(?:deduplicat(?:e|ed|ing|ion))\\b|` +
+    `\\b(?:code|logic)\\s+duplication\\b`,
+  'i',
+);
 
 function isInternalHelperOrReuseTitle(rawTitle: string): boolean {
   const core = semanticTitleCore(rawTitle);

@@ -130,6 +130,9 @@ describe('deterministic classification', () => {
     'introduce audience option',
     'add helper command for CLI',
     'add helper option to export command',
+    'add deduplication feature',
+    'add deduplication support for changelog entries',
+    'introduce deduplication option',
   ])(
     'preserves Added classification for legitimate new feature "%s"',
     (title) => {
@@ -141,6 +144,22 @@ describe('deterministic classification', () => {
     expect(
       classifyTitleDeterministically(
         'feat: added a little helper function to avoid deduplication in metadata di…',
+      ),
+    ).toEqual({
+      category: 'Added',
+      signal: 'conventional',
+    });
+    expect(
+      classifyTitleDeterministically(
+        'refactor: deduplicate auth token validation helpers',
+      ),
+    ).toEqual({
+      category: 'Changed',
+      signal: 'conventional',
+    });
+    expect(
+      classifyTitleDeterministically(
+        'feat: deduplicate auth token validation helpers',
       ),
     ).toEqual({
       category: 'Added',
@@ -281,4 +300,24 @@ describe('deterministic classification', () => {
       'release-note:325': 'Changed',
     });
   });
+
+  test.each([
+    'add deduplication support for release notes',
+    'support deduplication of release tags',
+    'add option to deduplicate changelog entries',
+  ])(
+    'preserves provider Added assignment for legitimate deduplication feature "%s"',
+    (title) => {
+      const changes = [releaseNoteChange(100, title)];
+      const providerAssignments: CategoryAssignments = {
+        'release-note:100': 'Added',
+      };
+
+      expect(
+        applyDeterministicClassification(changes, providerAssignments),
+      ).toEqual({
+        'release-note:100': 'Added',
+      });
+    },
+  );
 });

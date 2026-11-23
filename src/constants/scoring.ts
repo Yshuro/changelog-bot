@@ -4,6 +4,8 @@
 // Combo patterns
 export const COMBO_ADD_TO_IMPROVE_RE =
   /add .* to (improve|optimiz|refine|streamline|simplif)/i;
+export const COMBO_ADD_HELPER_OR_REUSE_RE =
+  /\badd\b.*\b(?:helper|util|function)\b.*\b(?:avoid|reduc|remov|eliminat|prevent|reuse|deduplicat)\b/i;
 export const COMBO_TIGHTEN_TYPE_RE = /(tighten|narrow).* (type|contract)/i;
 export const COMBO_FIX_BY_ADDING_RE = /fix .* by add(ing)?/i;
 export const COMBO_REMOVE_WITHOUT_REPLACEMENT_RE =

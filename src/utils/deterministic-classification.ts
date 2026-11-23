@@ -95,6 +95,11 @@ const CHANGE_LIKE_INDICATORS = [
   'fine-tune',
   'fine tune',
   'finetune',
+  'deduplicate',
+  'deduplication',
+  'code reuse',
+  'refactor',
+  'refactoring',
 ];
 
 // WHY: Only version-only release and publish titles identify automation. Anchoring
@@ -118,6 +123,55 @@ const WEAK_PROVIDER_CATEGORIES = new Set<BucketName>([
 
 function semanticTitleCore(rawTitle: string): string {
   return rawTitle.toLowerCase().replace(CONVENTIONAL_PREFIX_RE, '').trim();
+}
+
+// Patterns identifying internal helper additions, logic extraction, and deduplication/reuse.
+// WHY: Issue #373: Titles describing internal helper creation, utility extraction, or
+// code deduplication (e.g. PR #325) represent refactoring and belong under Changed,
+// not Added, unless explicitly marked as a new feature via Conventional Commits (feat:).
+const ADD_INTERNAL_HELPER_RE =
+  /\b(?:add(?:ed|ing)?|introduc(?:e|ed|ing)|creat(?:e|ed|ing))\s+(?:(?:a|an|the)\s+)?(?:(?:little|internal|shared|private|reusable|common)\s+)+(?:helper|utility|util|function|method)s?\b/i;
+
+const ADD_HELPER_FUNCTION_RE =
+  /\b(?:add(?:ed|ing)?|introduc(?:e|ed|ing)|creat(?:e|ed|ing))\s+(?:(?:a|an|the)\s+)?(?:helper|utility|util)\s+(?:function|method)s?\b/i;
+
+const ADD_HELPER_TO_DEDUPLICATE_OR_REUSE_RE =
+  /\b(?:add(?:ed|ing)?|introduc(?:e|ed|ing)|creat(?:e|ed|ing))\b.*?\b(?:helper|utility|util|function|method)s?\b.*?\b(?:to|for|in order to)\b.*?\b(?:avoid|reduc(?:e|ed|ing)|remov(?:e|ed|ing)|eliminat(?:e|ed|ing)|prevent(?:ing)?)\b.*?\b(?:(?:code|logic)\s+)?(?:de)?duplication\b/i;
+
+const ADD_HELPER_FOR_REUSE_RE =
+  /\b(?:add(?:ed|ing)?|introduc(?:e|ed|ing)|creat(?:e|ed|ing))\b.*?\b(?:helper|utility|util|function|method)s?\b.*?\b(?:to|for)\b.*?\b(?:(?:code|logic)\s+)?reuse\b/i;
+
+const EXTRACT_HELPER_OR_LOGIC_RE =
+  /\bextract(?:s|ed|ing|ion)?\s+(?:(?:a|an|the)\s+)?(?:shared|reusable|internal|private|common)\b/i;
+
+const EXTRACT_FUNCTION_OR_LOGIC_RE =
+  /\bextract(?:s|ed|ing|ion)?\b.*?\b(?:helper|function|utility|util|method|logic|predicate|guard)s?\b/i;
+
+const REUSE_LOGIC_RE =
+  /\b(?:reus(?:e|ed|ing|able)|code\s+reuse)\b.*?\b(?:logic|helper|function|utility|util|method|predicate|guard|implementation)s?\b/i;
+
+const REDUCE_DUPLICATION_RE =
+  /\b(?:reduc(?:e|ed|ing)|avoid(?:s|ed|ing)?|remov(?:e|ed|ing)|eliminat(?:e|ed|ing)|prevent(?:s|ed|ing)?)\b.*?\b(?:duplicated?|(?:code|logic)\s+duplication|(?:de)?duplication)\b/i;
+
+const DEDUPLICATION_INTENT_RE =
+  /\b(?:deduplicat(?:e|ed|ing|ion)|(?:code|logic)\s+duplication)\b/i;
+
+function isInternalHelperOrReuseTitle(rawTitle: string): boolean {
+  const core = semanticTitleCore(rawTitle);
+  if (/^(?:fix(?:es|ed|ing)?|patch(?:es|ed|ing)?)\b/i.test(core)) {
+    return false;
+  }
+  return (
+    ADD_INTERNAL_HELPER_RE.test(core) ||
+    ADD_HELPER_FUNCTION_RE.test(core) ||
+    ADD_HELPER_TO_DEDUPLICATE_OR_REUSE_RE.test(core) ||
+    ADD_HELPER_FOR_REUSE_RE.test(core) ||
+    EXTRACT_HELPER_OR_LOGIC_RE.test(core) ||
+    EXTRACT_FUNCTION_OR_LOGIC_RE.test(core) ||
+    REUSE_LOGIC_RE.test(core) ||
+    REDUCE_DUPLICATION_RE.test(core) ||
+    DEDUPLICATION_INTENT_RE.test(core)
+  );
 }
 
 function isImplicitFixTitle(rawTitle: string): boolean {
@@ -203,6 +257,9 @@ export function classifyTitleDeterministically(
   }
   if (isImplicitFixTitle(rawTitle)) {
     return { category: SECTION_FIXED, signal: 'strong-semantic' };
+  }
+  if (isInternalHelperOrReuseTitle(rawTitle)) {
+    return { category: SECTION_CHANGED, signal: 'strong-semantic' };
   }
 
   const scores = scoreCategories(rawTitle);

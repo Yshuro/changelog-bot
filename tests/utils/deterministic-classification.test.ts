@@ -100,6 +100,55 @@ describe('deterministic classification', () => {
   });
 
   test.each([
+    'added a little helper function to avoid deduplication in metadata di…',
+    'added a helper function to avoid deduplication in metadata diagnostics',
+    'add helper function to avoid deduplication in metadata diagnostics',
+    'add helper to reduce duplication in diagnostic formatting',
+    'add internal helper to format errors',
+    'add shared helper function for fallback reasons',
+    'introduce internal helper for diagnostics',
+    'extract shared fallback reason formatting in dry-run diagnostics',
+    'extract helper function for metadata diagnostics',
+    'extract internal helper to parse release tags',
+    'reuse pull request lookup logic for commits',
+    'reuse version section matching logic in changelog utilities',
+    'reduce duplicated GitHub metadata error formatting',
+    'deduplicate pull request lookup logic',
+  ])(
+    'classifies internal helper extraction or code reuse in "%s" as Changed',
+    (title) => {
+      expect(classifyTitleDeterministically(title)).toEqual({
+        category: 'Changed',
+        signal: 'strong-semantic',
+      });
+    },
+  );
+
+  test.each([
+    'add support for custom models',
+    'add markdown export feature',
+    'introduce audience option',
+    'add helper command for CLI',
+    'add helper option to export command',
+  ])(
+    'preserves Added classification for legitimate new feature "%s"',
+    (title) => {
+      expect(classifyTitleDeterministically(title).category).toBe('Added');
+    },
+  );
+
+  test('preserves explicit conventional commit precedence over internal helper semantics', () => {
+    expect(
+      classifyTitleDeterministically(
+        'feat: added a little helper function to avoid deduplication in metadata di…',
+      ),
+    ).toEqual({
+      category: 'Added',
+      signal: 'conventional',
+    });
+  });
+
+  test.each([
     'Release: 0.9.0',
     'release: v0.9.0',
     'chore(release): 0.9.0',
@@ -212,6 +261,24 @@ describe('deterministic classification', () => {
       'release-note:0': 'Breaking Changes',
       'release-note:1': 'Breaking Changes',
       'release-note:2': 'Reverted',
+    });
+  });
+
+  test('overrides provider Added assignment for internal helper extraction (#325 regression)', () => {
+    const changes = [
+      releaseNoteChange(
+        325,
+        'added a little helper function to avoid deduplication in metadata di…',
+      ),
+    ];
+    const providerAssignments: CategoryAssignments = {
+      'release-note:325': 'Added',
+    };
+
+    expect(
+      applyDeterministicClassification(changes, providerAssignments),
+    ).toEqual({
+      'release-note:325': 'Changed',
     });
   });
 });

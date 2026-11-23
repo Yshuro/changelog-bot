@@ -75,6 +75,26 @@ describe('classifyChangesWithFallback', () => {
     });
   });
 
+  test('overrides provider Added assignment for internal helper addition (#325 regression)', async () => {
+    const result = await classifyChangesWithFallback({
+      changes: [
+        {
+          id: 'release-note:325',
+          title:
+            'added a little helper function to avoid deduplication in metadata di…',
+        },
+      ],
+      hasApiKey: true,
+      request: async () => JSON.stringify({ 'release-note:325': 'Added' }),
+      invalidResponseMessage: 'Invalid response',
+    });
+
+    expect(result).toEqual({
+      assignments: { 'release-note:325': 'Changed' },
+      diagnostics: [],
+    });
+  });
+
   test('falls back when the provider request fails', async () => {
     const result = await classifyChangesWithFallback({
       changes,

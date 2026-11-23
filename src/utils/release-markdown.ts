@@ -1,3 +1,5 @@
+import { CLOSING_FENCE_RE, OPENING_FENCE_RE } from '@/constants/markdown.js';
+
 const MIN_MARKDOWN_ATX_HEADING_LEVEL = 1;
 const RELEASE_SECTION_HEADING_LEVEL = 2;
 /** Heading depth used to render additional release-note sections. */
@@ -32,6 +34,64 @@ export type RawReleaseSection = {
   lines: string[];
 };
 
+/** Opening delimiter of the fenced code block being read. */
+type OpenCodeFence = {
+  /** Fence character, a backtick or a tilde. */
+  marker: string;
+  /** Number of fence characters in the opening delimiter. */
+  length: number;
+};
+
+/** Fence state after reading one line. */
+type CodeFenceStep = {
+  /** Fence still open after the line, if any. */
+  openFence: OpenCodeFence | undefined;
+  /** Whether the line opened or closed a fence. */
+  isDelimiter: boolean;
+};
+
+/**
+ * Advance fenced code block tracking by one line.
+ * @param line Markdown line being read.
+ * @param openFence Fence open before this line, if any.
+ * @returns Fence state after the line.
+ */
+function trackCodeFence(
+  line: string,
+  openFence: OpenCodeFence | undefined,
+): CodeFenceStep {
+  if (!openFence) {
+    const openMatch = line.match(OPENING_FENCE_RE);
+    if (!openMatch) return { openFence: undefined, isDelimiter: false };
+    const [, openDelimiter, infoString] = openMatch;
+    // WHY: CommonMark permits backticks in tilde fence info strings only, so a
+    // line like ```a`b``` is inline code rather than an opening fence.
+    if (openDelimiter.startsWith('`') && infoString.includes('`')) {
+      return { openFence: undefined, isDelimiter: false };
+    }
+    return {
+      openFence: {
+        marker: openDelimiter.charAt(0),
+        length: openDelimiter.length,
+      },
+      isDelimiter: true,
+    };
+  }
+
+  const closeDelimiter =
+    line.match(CLOSING_FENCE_RE)?.[FENCE_MARKER_MATCH_INDEX];
+  // WHY: CommonMark closes a fence only with the same character, at least as
+  // many of them, and nothing after it, so a nested ``` inside a ```` block or
+  // a ```ts line inside a ``` block stays example content.
+  const closesFence =
+    closeDelimiter !== undefined &&
+    closeDelimiter.charAt(0) === openFence.marker &&
+    closeDelimiter.length >= openFence.length;
+  return closesFence
+    ? { openFence: undefined, isDelimiter: true }
+    : { openFence, isDelimiter: false };
+}
+
 function normalizeReleaseHeadingLine(line: string): string {
   if (ATX_HEADING_RE.test(line)) return line;
 
@@ -60,8 +120,19 @@ export function collectReleaseH2Sections(body: string): RawReleaseSection[] {
   const lines = body.split(/\r?\n/);
   const sections: RawReleaseSection[] = [];
   let currentSection: RawReleaseSection | null = null;
+  let openFence: OpenCodeFence | undefined;
 
   for (const rawLine of lines) {
+    const fenceStep = trackCodeFence(rawLine, openFence);
+    // WHY: Release notes often carry markdown examples. A heading-shaped line
+    // inside a fenced code block is example content, so keep it verbatim and
+    // never let it start a new release section.
+    if (openFence || fenceStep.isDelimiter) {
+      openFence = fenceStep.openFence;
+      if (currentSection) currentSection.lines.push(rawLine);
+      continue;
+    }
+
     // WHY: Workflow inputs can introduce stray non-text prefixes before
     // headings, so normalize only heading-shaped lines before H2 detection.
     const line = normalizeReleaseHeadingLine(rawLine);
@@ -86,8 +157,18 @@ export function collectReleaseH2Sections(body: string): RawReleaseSection[] {
 export function collectReleasePreamble(body: string): string[] {
   const lines = body.split(/\r?\n/);
   const preamble: string[] = [];
+  let openFence: OpenCodeFence | undefined;
 
   for (const rawLine of lines) {
+    const fenceStep = trackCodeFence(rawLine, openFence);
+    // WHY: Match collectReleaseH2Sections, so an example heading inside a
+    // fence neither ends the preamble nor is rewritten.
+    if (openFence || fenceStep.isDelimiter) {
+      openFence = fenceStep.openFence;
+      preamble.push(rawLine);
+      continue;
+    }
+
     const line = normalizeReleaseHeadingLine(rawLine);
     if (parseReleaseHeading(line)) return preamble;
     preamble.push(line);

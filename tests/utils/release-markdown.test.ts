@@ -1,6 +1,7 @@
 import { test, expect, describe } from '@jest/globals';
 import {
   collectReleaseH2Sections,
+  collectReleasePreamble,
   demoteAdditionalSectionHeadings,
 } from '@/utils/release-markdown.js';
 
@@ -104,5 +105,167 @@ describe('demoteAdditionalSectionHeadings', () => {
 
   test('leaves lines without heading whitespace untouched', () => {
     expect(demoteAdditionalSectionHeadings('##NoSpace')).toBe('##NoSpace');
+  });
+});
+
+describe('collectReleaseH2Sections with fenced code blocks', () => {
+  test('keeps H2-like lines inside a backtick fence in the current section', () => {
+    const body = [
+      "## What's Changed",
+      '',
+      'Here is an example:',
+      '',
+      '```markdown',
+      '## Example',
+      '- This is not a release section',
+      '```',
+      '',
+      '- fix: resolve an issue',
+    ].join('\n');
+
+    const sections = collectReleaseH2Sections(body);
+
+    expect(sections.map((section) => section.heading)).toEqual([
+      "What's Changed",
+    ]);
+    expect(sections[0]?.lines).toEqual(body.split('\n').slice(1));
+  });
+
+  test('keeps H2-like lines inside a tilde fence in the current section', () => {
+    const body = ['## Added', '~~~md', '## Example', '~~~', '- one'].join('\n');
+
+    const sections = collectReleaseH2Sections(body);
+
+    expect(sections.map((section) => section.heading)).toEqual(['Added']);
+    expect(sections[0]?.lines).toEqual(['~~~md', '## Example', '~~~', '- one']);
+  });
+
+  test('splits the sections around an embedded fence in their original order', () => {
+    const body = [
+      '## Added',
+      '- one',
+      '```',
+      '## not a section',
+      '```',
+      '## Fixed',
+      '- two',
+      '~~~',
+      '## also not a section',
+      '~~~',
+      '## Docs',
+      '- three',
+    ].join('\n');
+
+    const sections = collectReleaseH2Sections(body);
+
+    expect(sections).toEqual([
+      { heading: 'Added', lines: ['- one', '```', '## not a section', '```'] },
+      {
+        heading: 'Fixed',
+        lines: ['- two', '~~~', '## also not a section', '~~~'],
+      },
+      { heading: 'Docs', lines: ['- three'] },
+    ]);
+  });
+
+  test('keeps fenced lines verbatim instead of normalizing them', () => {
+    const body = ['## Added', '```', '!!## prefixed example', '```'].join('\n');
+
+    const sections = collectReleaseH2Sections(body);
+
+    expect(sections[0]?.lines).toEqual(['```', '!!## prefixed example', '```']);
+  });
+
+  test('a shorter or different delimiter does not close a longer fence', () => {
+    const body = [
+      '## Added',
+      '````markdown',
+      '```ts',
+      '~~~',
+      '## still fenced',
+      '```',
+      '````',
+      '## After',
+      '- two',
+    ].join('\n');
+
+    const sections = collectReleaseH2Sections(body);
+
+    expect(sections.map((section) => section.heading)).toEqual([
+      'Added',
+      'After',
+    ]);
+    expect(sections[1]?.lines).toEqual(['- two']);
+  });
+
+  test('an unclosed fence runs to the end of the body, as in CommonMark', () => {
+    const body = ['## Added', '```', '## inside the open fence'].join('\n');
+
+    const sections = collectReleaseH2Sections(body);
+
+    expect(sections.map((section) => section.heading)).toEqual(['Added']);
+    expect(sections[0]?.lines).toEqual(['```', '## inside the open fence']);
+  });
+});
+
+describe('collectReleaseH2Sections fence rules shared with attach-pr', () => {
+  test('a delimiter indented four spaces does not open a fence', () => {
+    const body = ['## Added', '    ```', '## Fixed', '- two'].join('\n');
+
+    const sections = collectReleaseH2Sections(body);
+
+    expect(sections.map((section) => section.heading)).toEqual([
+      'Added',
+      'Fixed',
+    ]);
+  });
+
+  test('a backtick run with a backtick in its info string does not open a fence', () => {
+    const body = ['## Added', '```a`b', '## Fixed', '- two'].join('\n');
+
+    const sections = collectReleaseH2Sections(body);
+
+    expect(sections.map((section) => section.heading)).toEqual([
+      'Added',
+      'Fixed',
+    ]);
+  });
+
+  test('a closing fence may carry trailing spaces but no info string', () => {
+    const body = [
+      '## Added',
+      '```',
+      '```ts',
+      '## still fenced',
+      '```  ',
+      '## Fixed',
+    ].join('\n');
+
+    const sections = collectReleaseH2Sections(body);
+
+    expect(sections.map((section) => section.heading)).toEqual([
+      'Added',
+      'Fixed',
+    ]);
+  });
+});
+
+describe('collectReleasePreamble with fenced code blocks', () => {
+  test('does not end the preamble at an H2-like line inside a fence', () => {
+    const body = [
+      'Intro text',
+      '```',
+      '## Example',
+      '```',
+      '## Added',
+      '- one',
+    ].join('\n');
+
+    expect(collectReleasePreamble(body)).toEqual([
+      'Intro text',
+      '```',
+      '## Example',
+      '```',
+    ]);
   });
 });

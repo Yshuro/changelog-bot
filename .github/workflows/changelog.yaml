@@ -48,6 +48,9 @@ on:
         required: false
         type: string
         default: '0'
+      check:
+        required: false
+        type: string
       dry_run:
         required: false
         type: string
@@ -149,6 +152,7 @@ jobs:
           audience: ${{ inputs.audience }}
           npm-version: ${{ inputs.npm_version }}
           minimum-package-age-days: ${{ inputs.minimum_package_age_days }}
+          check: ${{ inputs.check }}
           dry-run: ${{ inputs.dry_run }}
           dry-run-json-report: ${{ inputs.dry_run_json_report }}
           fail-on-llm-error: ${{ inputs.fail_on_llm_error }}

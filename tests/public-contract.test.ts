@@ -222,6 +222,20 @@ describe('public contract parity', () => {
     expect(readmeText).toContain('| `release-notes` |');
   });
 
+  test('forwards the changelog drift check through CI wrappers', () => {
+    const actionYaml = readRepoFile('action.yml');
+    const workflowYaml = readRepoFile('.github/workflows/changelog.yaml');
+
+    expect(actionYaml).toContain('INPUT_CHECK: ${{ inputs.check }}');
+    expect(actionYaml).toContain(
+      'if [ "${INPUT_CHECK:-}" = "true" ]; then\n          CMD+=(--check)',
+    );
+    expect(actionYaml).toContain(
+      'elif [ "${INPUT_CHECK:-}" = "false" ]; then\n          CMD+=(--no-check)',
+    );
+    expect(workflowYaml).toContain('check: ${{ inputs.check }}');
+  });
+
   test('forwards the WHY engine and TypeSafe credential through CI wrappers', () => {
     const actionYaml = readRepoFile('action.yml');
     const workflowYaml = readRepoFile('.github/workflows/changelog.yaml');

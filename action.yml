@@ -53,6 +53,9 @@ inputs:
     description: 'Minimum age in days required for the npm package version resolved from npm-version'
     required: false
     default: '0'
+  check:
+    description: "If 'true', fail when the committed changelog differs from generated output, without writing or PR"
+    required: false
   dry-run:
     description: "If 'true', print updated changelog without writing or PR"
     required: false
@@ -133,6 +136,7 @@ runs:
         INPUT_INSTRUCTIONS_FILE: ${{ inputs['instructions-file'] }}
         INPUT_OUTPUT: ${{ inputs.output }}
         INPUT_MINIMUM_PACKAGE_AGE_DAYS: ${{ inputs['minimum-package-age-days'] }}
+        INPUT_CHECK: ${{ inputs.check }}
         INPUT_DRY_RUN: ${{ inputs['dry-run'] }}
         INPUT_DRY_RUN_JSON_REPORT: ${{ inputs['dry-run-json-report'] }}
         INPUT_FAIL_ON_LLM_ERROR: ${{ inputs['fail-on-llm-error'] }}
@@ -197,6 +201,11 @@ runs:
         fi
         if [ -n "${INPUT_OUTPUT:-}" ]; then
           CMD+=(--output "${INPUT_OUTPUT}")
+        fi
+        if [ "${INPUT_CHECK:-}" = "true" ]; then
+          CMD+=(--check)
+        elif [ "${INPUT_CHECK:-}" = "false" ]; then
+          CMD+=(--no-check)
         fi
         if [ "${INPUT_DRY_RUN:-}" = "true" ]; then
           CMD+=(--dry-run)

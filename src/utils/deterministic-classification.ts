@@ -140,7 +140,7 @@ const EXTRACT_HELPER_OR_LOGIC_RE =
   /\bextract(?:s|ed|ing|ion)?\s+(?:(?:a|an|the)\s+)?(?:shared|reusable|internal|private|common)\b/i;
 
 const EXTRACT_FUNCTION_OR_LOGIC_RE =
-  /\bextract(?:s|ed|ing|ion)?\b.*?\b(?:helper|function|utility|util|method|logic|predicate|guard)s?\b/i;
+  /\bextract(?:s|ed|ing|ion)?\s+(?:(?:a|an|the)\s+)?(?:(?:shared|internal|helper|utility|util|common|private)\s+)?(?:helper|function|utility|util|method|logic|predicate|guard)s?\b(?!\s+signatures?\b)/i;
 
 const REUSE_LOGIC_RE =
   /\b(?:reus(?:e|ed|ing|able)|code\s+reuse)\b.*?\b(?:logic|helper|function|utility|util|method|predicate|guard|implementation)s?\b/i;
@@ -157,8 +157,7 @@ const REDUCE_DUPLICATION_RE = new RegExp(
 
 const DEDUPLICATION_INTENT_RE = new RegExp(
   `\\b(?:deduplicat(?:e|ed|ing|ion))\\b.*?\\b${INTERNAL_OR_REUSE_CONTEXT}\\b|` +
-    `\\b${INTERNAL_OR_REUSE_CONTEXT}\\b.*?\\b(?:deduplicat(?:e|ed|ing|ion))\\b|` +
-    `\\b(?:code|logic)\\s+duplication\\b`,
+    `\\b${INTERNAL_OR_REUSE_CONTEXT}\\b.*?\\b(?:deduplicat(?:e|ed|ing|ion))\\b`,
   'i',
 );
 

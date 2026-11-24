@@ -95,24 +95,31 @@ describe('classifyChangesWithFallback', () => {
     });
   });
 
-  test('preserves provider Added assignment for legitimate deduplication features', async () => {
-    const result = await classifyChangesWithFallback({
-      changes: [
-        {
-          id: 'release-note:400',
-          title: 'add deduplication support for release notes',
-        },
-      ],
-      hasApiKey: true,
-      request: async () => JSON.stringify({ 'release-note:400': 'Added' }),
-      invalidResponseMessage: 'Invalid response',
-    });
+  test.each([
+    'add deduplication support for release notes',
+    'add code duplication detection',
+    'add a code duplication report to the CLI',
+  ])(
+    'preserves provider Added assignment for legitimate deduplication feature "%s"',
+    async (title) => {
+      const result = await classifyChangesWithFallback({
+        changes: [
+          {
+            id: 'release-note:400',
+            title,
+          },
+        ],
+        hasApiKey: true,
+        request: async () => JSON.stringify({ 'release-note:400': 'Added' }),
+        invalidResponseMessage: 'Invalid response',
+      });
 
-    expect(result).toEqual({
-      assignments: { 'release-note:400': 'Added' },
-      diagnostics: [],
-    });
-  });
+      expect(result).toEqual({
+        assignments: { 'release-note:400': 'Added' },
+        diagnostics: [],
+      });
+    },
+  );
 
   test('falls back when the provider request fails', async () => {
     const result = await classifyChangesWithFallback({

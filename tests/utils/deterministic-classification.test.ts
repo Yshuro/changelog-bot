@@ -133,10 +133,24 @@ describe('deterministic classification', () => {
     'add deduplication feature',
     'add deduplication support for changelog entries',
     'introduce deduplication option',
+    'add code duplication detection',
+    'add a code duplication report to the CLI',
   ])(
     'preserves Added classification for legitimate new feature "%s"',
     (title) => {
       expect(classifyTitleDeterministically(title).category).toBe('Added');
+    },
+  );
+
+  test.each([
+    ['extract function signatures into the API docs', 'Docs'],
+    ['extract release notes logic from commit bodies', 'Chore'],
+  ])(
+    'preserves classification for non-refactoring extraction title "%s" as %s',
+    (title, expectedCategory) => {
+      expect(classifyTitleDeterministically(title).category).toBe(
+        expectedCategory,
+      );
     },
   );
 
@@ -305,6 +319,8 @@ describe('deterministic classification', () => {
     'add deduplication support for release notes',
     'support deduplication of release tags',
     'add option to deduplicate changelog entries',
+    'add code duplication detection',
+    'add a code duplication report to the CLI',
   ])(
     'preserves provider Added assignment for legitimate deduplication feature "%s"',
     (title) => {

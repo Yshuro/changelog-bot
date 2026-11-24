@@ -146,7 +146,7 @@ const REUSE_LOGIC_RE =
   /\b(?:reus(?:e|ed|ing|able)|code\s+reuse)\b.*?\b(?:logic|helper|function|utility|util|method|predicate|guard|implementation)s?\b/i;
 
 const INTERNAL_OR_REUSE_CONTEXT =
-  '(?:helpers?|utilities|utility|utils?|functions?|methods?|logics?|code|implementations?|routines?|predicates?|guards?|diagnostics?|formatting|internal|private|shared|reusable|reuse)';
+  '(?:helpers?|utilities|utility|utils?|functions?|methods?|logics?|implementations?|routines?|predicates?|guards?|diagnostics?|formatting|internal|private|shared|reusable|reuse)';
 
 const REDUCE_DUPLICATION_RE = new RegExp(
   `\\b(?:reduc(?:e|ed|ing)|avoid(?:s|ed|ing)?|remov(?:e|ed|ing)|eliminat(?:e|ed|ing)|prevent(?:s|ed|ing)?)\\b.*?\\b(?:duplicated?|(?:code|logic)\\s+duplication|(?:de)?duplication)\\b.*?\\b${INTERNAL_OR_REUSE_CONTEXT}\\b|` +

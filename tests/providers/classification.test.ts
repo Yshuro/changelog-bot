@@ -99,6 +99,9 @@ describe('classifyChangesWithFallback', () => {
     'add deduplication support for release notes',
     'add code duplication detection',
     'add a code duplication report to the CLI',
+    'add code deduplication detection to the CLI',
+    'add a code deduplication report to the CLI',
+    'add deduplication support for code blocks',
   ])(
     'preserves provider Added assignment for legitimate deduplication feature "%s"',
     async (title) => {

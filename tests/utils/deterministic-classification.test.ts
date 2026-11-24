@@ -135,6 +135,9 @@ describe('deterministic classification', () => {
     'introduce deduplication option',
     'add code duplication detection',
     'add a code duplication report to the CLI',
+    'add code deduplication detection to the CLI',
+    'add a code deduplication report to the CLI',
+    'add deduplication support for code blocks',
   ])(
     'preserves Added classification for legitimate new feature "%s"',
     (title) => {
@@ -321,6 +324,9 @@ describe('deterministic classification', () => {
     'add option to deduplicate changelog entries',
     'add code duplication detection',
     'add a code duplication report to the CLI',
+    'add code deduplication detection to the CLI',
+    'add a code deduplication report to the CLI',
+    'add deduplication support for code blocks',
   ])(
     'preserves provider Added assignment for legitimate deduplication feature "%s"',
     (title) => {

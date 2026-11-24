@@ -92,6 +92,27 @@ function trackCodeFence(
     : { openFence, isDelimiter: false };
 }
 
+/**
+ * Drop fenced code blocks, delimiters included, from a section's lines.
+ * @param lines Section body lines.
+ * @returns Lines that sit outside every fenced code block.
+ */
+export function withoutFencedCode(lines: string[]): string[] {
+  const kept: string[] = [];
+  let openFence: OpenCodeFence | undefined;
+  for (const line of lines) {
+    const fenceStep = trackCodeFence(line, openFence);
+    // WHY: a fence under What's Changed is example markup, so neither its
+    // delimiters nor the bullets inside it are release items.
+    if (openFence || fenceStep.isDelimiter) {
+      openFence = fenceStep.openFence;
+      continue;
+    }
+    kept.push(line);
+  }
+  return kept;
+}
+
 function normalizeReleaseHeadingLine(line: string): string {
   if (ATX_HEADING_RE.test(line)) return line;
 

@@ -10,6 +10,7 @@ import {
   collectReleaseH2Sections,
   collectReleasePreamble,
   type RawReleaseSection,
+  withoutFencedCode,
 } from '@/utils/release-markdown.js';
 import { stripConventionalPrefix } from '@/utils/title-normalize.js';
 
@@ -101,7 +102,7 @@ function isFullChangelogHeading(heading: string): boolean {
 
 function parseWhatsChangedLines(lines: string[]): string[] {
   const collected: string[] = [];
-  for (const rawLine of lines) {
+  for (const rawLine of withoutFencedCode(lines)) {
     const line = rawLine.trim();
     if (line && !FULL_CHANGELOG_RE.test(line)) collected.push(line);
   }

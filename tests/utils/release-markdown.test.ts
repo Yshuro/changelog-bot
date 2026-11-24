@@ -4,6 +4,7 @@ import {
   collectReleasePreamble,
   demoteAdditionalSectionHeadings,
 } from '@/utils/release-markdown.js';
+import { parseReleaseNotes } from '@/utils/release-notes.js';
 
 describe('collectReleaseH2Sections', () => {
   test('preserves H2 sections in source order', () => {
@@ -267,5 +268,56 @@ describe('collectReleasePreamble with fenced code blocks', () => {
       '## Example',
       '```',
     ]);
+  });
+});
+
+describe('parseReleaseNotes with fenced code blocks', () => {
+  const titles = (body: string) =>
+    parseReleaseNotes(body).items.map((item) => item.title);
+
+  test('does not turn fenced example content into release items', () => {
+    const body = [
+      "## What's Changed",
+      '',
+      '```md',
+      '## Example',
+      '- This is not a release item',
+      '```',
+      '',
+      '- fix: resolve an issue',
+    ].join('\n');
+
+    expect(titles(body)).toEqual(['resolve an issue']);
+  });
+
+  test('keeps the items on both sides of a fence in order', () => {
+    const body = [
+      "## What's Changed",
+      '- feat: add a first thing',
+      '~~~',
+      '- not an item',
+      '~~~',
+      '- fix: repair a second thing',
+    ].join('\n');
+
+    expect(titles(body)).toEqual([
+      'add a first thing',
+      'repair a second thing',
+    ]);
+  });
+
+  test('skips a longer fence even when a shorter one appears inside it', () => {
+    const body = [
+      "## What's Changed",
+      '````md',
+      '```ts',
+      '- still example content',
+      '```',
+      '- also example content',
+      '````',
+      '- fix: the only real item',
+    ].join('\n');
+
+    expect(titles(body)).toEqual(['the only real item']);
   });
 });

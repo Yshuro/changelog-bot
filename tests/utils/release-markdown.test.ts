@@ -1,8 +1,10 @@
 import { test, expect, describe } from '@jest/globals';
 import {
   collectReleaseH2Sections,
+  collectReleasePreamble,
   demoteAdditionalSectionHeadings,
 } from '@/utils/release-markdown.js';
+import { parseReleaseNotes } from '@/utils/release-notes.js';
 
 describe('collectReleaseH2Sections', () => {
   test('preserves H2 sections in source order', () => {
@@ -104,5 +106,218 @@ describe('demoteAdditionalSectionHeadings', () => {
 
   test('leaves lines without heading whitespace untouched', () => {
     expect(demoteAdditionalSectionHeadings('##NoSpace')).toBe('##NoSpace');
+  });
+});
+
+describe('collectReleaseH2Sections with fenced code blocks', () => {
+  test('keeps H2-like lines inside a backtick fence in the current section', () => {
+    const body = [
+      "## What's Changed",
+      '',
+      'Here is an example:',
+      '',
+      '```markdown',
+      '## Example',
+      '- This is not a release section',
+      '```',
+      '',
+      '- fix: resolve an issue',
+    ].join('\n');
+
+    const sections = collectReleaseH2Sections(body);
+
+    expect(sections.map((section) => section.heading)).toEqual([
+      "What's Changed",
+    ]);
+    expect(sections[0]?.lines).toEqual(body.split('\n').slice(1));
+  });
+
+  test('keeps H2-like lines inside a tilde fence in the current section', () => {
+    const body = ['## Added', '~~~md', '## Example', '~~~', '- one'].join('\n');
+
+    const sections = collectReleaseH2Sections(body);
+
+    expect(sections.map((section) => section.heading)).toEqual(['Added']);
+    expect(sections[0]?.lines).toEqual(['~~~md', '## Example', '~~~', '- one']);
+  });
+
+  test('splits the sections around an embedded fence in their original order', () => {
+    const body = [
+      '## Added',
+      '- one',
+      '```',
+      '## not a section',
+      '```',
+      '## Fixed',
+      '- two',
+      '~~~',
+      '## also not a section',
+      '~~~',
+      '## Docs',
+      '- three',
+    ].join('\n');
+
+    const sections = collectReleaseH2Sections(body);
+
+    expect(sections).toEqual([
+      { heading: 'Added', lines: ['- one', '```', '## not a section', '```'] },
+      {
+        heading: 'Fixed',
+        lines: ['- two', '~~~', '## also not a section', '~~~'],
+      },
+      { heading: 'Docs', lines: ['- three'] },
+    ]);
+  });
+
+  test('keeps fenced lines verbatim instead of normalizing them', () => {
+    const body = ['## Added', '```', '!!## prefixed example', '```'].join('\n');
+
+    const sections = collectReleaseH2Sections(body);
+
+    expect(sections[0]?.lines).toEqual(['```', '!!## prefixed example', '```']);
+  });
+
+  test('a shorter or different delimiter does not close a longer fence', () => {
+    const body = [
+      '## Added',
+      '````markdown',
+      '```ts',
+      '~~~',
+      '## still fenced',
+      '```',
+      '````',
+      '## After',
+      '- two',
+    ].join('\n');
+
+    const sections = collectReleaseH2Sections(body);
+
+    expect(sections.map((section) => section.heading)).toEqual([
+      'Added',
+      'After',
+    ]);
+    expect(sections[1]?.lines).toEqual(['- two']);
+  });
+
+  test('an unclosed fence runs to the end of the body, as in CommonMark', () => {
+    const body = ['## Added', '```', '## inside the open fence'].join('\n');
+
+    const sections = collectReleaseH2Sections(body);
+
+    expect(sections.map((section) => section.heading)).toEqual(['Added']);
+    expect(sections[0]?.lines).toEqual(['```', '## inside the open fence']);
+  });
+});
+
+describe('collectReleaseH2Sections fence rules shared with attach-pr', () => {
+  test('a delimiter indented four spaces does not open a fence', () => {
+    const body = ['## Added', '    ```', '## Fixed', '- two'].join('\n');
+
+    const sections = collectReleaseH2Sections(body);
+
+    expect(sections.map((section) => section.heading)).toEqual([
+      'Added',
+      'Fixed',
+    ]);
+  });
+
+  test('a backtick run with a backtick in its info string does not open a fence', () => {
+    const body = ['## Added', '```a`b', '## Fixed', '- two'].join('\n');
+
+    const sections = collectReleaseH2Sections(body);
+
+    expect(sections.map((section) => section.heading)).toEqual([
+      'Added',
+      'Fixed',
+    ]);
+  });
+
+  test('a closing fence may carry trailing spaces but no info string', () => {
+    const body = [
+      '## Added',
+      '```',
+      '```ts',
+      '## still fenced',
+      '```  ',
+      '## Fixed',
+    ].join('\n');
+
+    const sections = collectReleaseH2Sections(body);
+
+    expect(sections.map((section) => section.heading)).toEqual([
+      'Added',
+      'Fixed',
+    ]);
+  });
+});
+
+describe('collectReleasePreamble with fenced code blocks', () => {
+  test('does not end the preamble at an H2-like line inside a fence', () => {
+    const body = [
+      'Intro text',
+      '```',
+      '## Example',
+      '```',
+      '## Added',
+      '- one',
+    ].join('\n');
+
+    expect(collectReleasePreamble(body)).toEqual([
+      'Intro text',
+      '```',
+      '## Example',
+      '```',
+    ]);
+  });
+});
+
+describe('parseReleaseNotes with fenced code blocks', () => {
+  const titles = (body: string) =>
+    parseReleaseNotes(body).items.map((item) => item.title);
+
+  test('does not turn fenced example content into release items', () => {
+    const body = [
+      "## What's Changed",
+      '',
+      '```md',
+      '## Example',
+      '- This is not a release item',
+      '```',
+      '',
+      '- fix: resolve an issue',
+    ].join('\n');
+
+    expect(titles(body)).toEqual(['resolve an issue']);
+  });
+
+  test('keeps the items on both sides of a fence in order', () => {
+    const body = [
+      "## What's Changed",
+      '- feat: add a first thing',
+      '~~~',
+      '- not an item',
+      '~~~',
+      '- fix: repair a second thing',
+    ].join('\n');
+
+    expect(titles(body)).toEqual([
+      'add a first thing',
+      'repair a second thing',
+    ]);
+  });
+
+  test('skips a longer fence even when a shorter one appears inside it', () => {
+    const body = [
+      "## What's Changed",
+      '````md',
+      '```ts',
+      '- still example content',
+      '```',
+      '- also example content',
+      '````',
+      '- fix: the only real item',
+    ].join('\n');
+
+    expect(titles(body)).toEqual(['the only real item']);
   });
 });

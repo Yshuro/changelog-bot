@@ -120,6 +120,65 @@ function semanticTitleCore(rawTitle: string): string {
   return rawTitle.toLowerCase().replace(CONVENTIONAL_PREFIX_RE, '').trim();
 }
 
+// Patterns identifying internal helper additions, logic extraction, and deduplication/reuse.
+// WHY: Issue #373: Titles describing internal helper creation, utility extraction, or
+// code deduplication (e.g. PR #325) represent refactoring and belong under Changed,
+// not Added, unless explicitly marked as a new feature via Conventional Commits (feat:).
+const ADD_INTERNAL_HELPER_RE =
+  /\b(?:add(?:ed|ing)?|introduc(?:e|ed|ing)|creat(?:e|ed|ing))\s+(?:(?:a|an|the)\s+)?(?:(?:little|internal|shared|private|reusable|common)\s+)+(?:helper|utility|util|function|method)s?\b/i;
+
+const ADD_HELPER_FUNCTION_RE =
+  /\b(?:add(?:ed|ing)?|introduc(?:e|ed|ing)|creat(?:e|ed|ing))\s+(?:(?:a|an|the)\s+)?(?:helper|utility|util)\s+(?:function|method)s?\b/i;
+
+const ADD_HELPER_TO_DEDUPLICATE_OR_REUSE_RE =
+  /\b(?:add(?:ed|ing)?|introduc(?:e|ed|ing)|creat(?:e|ed|ing))\b.*?\b(?:helper|utility|util|function|method)s?\b.*?\b(?:to|for|in order to)\b.*?\b(?:avoid|reduc(?:e|ed|ing)|remov(?:e|ed|ing)|eliminat(?:e|ed|ing)|prevent(?:ing)?)\b.*?\b(?:(?:code|logic)\s+)?(?:de)?duplication\b/i;
+
+const ADD_HELPER_FOR_REUSE_RE =
+  /\b(?:add(?:ed|ing)?|introduc(?:e|ed|ing)|creat(?:e|ed|ing))\b.*?\b(?:helper|utility|util|function|method)s?\b.*?\b(?:to|for)\b.*?\b(?:(?:code|logic)\s+)?reuse\b/i;
+
+const EXTRACT_HELPER_OR_LOGIC_RE =
+  /\bextract(?:s|ed|ing|ion)?\s+(?:(?:a|an|the)\s+)?(?:shared|reusable|internal|private|common)\b/i;
+
+const EXTRACT_FUNCTION_OR_LOGIC_RE =
+  /\bextract(?:s|ed|ing|ion)?\s+(?:(?:a|an|the)\s+)?(?:(?:shared|internal|helper|utility|util|common|private)\s+)?(?:helper|function|utility|util|method|logic|predicate|guard)s?\b(?!\s+signatures?\b)/i;
+
+const REUSE_LOGIC_RE =
+  /\b(?:reus(?:e|ed|ing|able)|code\s+reuse)\b.*?\b(?:logic|helper|function|utility|util|method|predicate|guard|implementation)s?\b/i;
+
+const INTERNAL_OR_REUSE_CONTEXT =
+  '(?:helpers?|utilities|utility|utils?|functions?|methods?|logics?|implementations?|routines?|predicates?|guards?|diagnostics?|formatting|internal|private|shared|reusable|reuse)';
+
+const REDUCE_DUPLICATION_RE = new RegExp(
+  `\\b(?:reduc(?:e|ed|ing)|avoid(?:s|ed|ing)?|remov(?:e|ed|ing)|eliminat(?:e|ed|ing)|prevent(?:s|ed|ing)?)\\b.*?\\b(?:duplicated?|(?:code|logic)\\s+duplication|(?:de)?duplication)\\b.*?\\b${INTERNAL_OR_REUSE_CONTEXT}\\b|` +
+    `\\b${INTERNAL_OR_REUSE_CONTEXT}\\b.*?\\b(?:reduc(?:e|ed|ing)|avoid(?:s|ed|ing)?|remov(?:e|ed|ing)|eliminat(?:e|ed|ing)|prevent(?:s|ed|ing)?)\\b.*?\\b(?:duplicated?|(?:code|logic)\\s+duplication|(?:de)?duplication)\\b|` +
+    `\\b(?:reduc(?:e|ed|ing)|avoid(?:s|ed|ing)?|remov(?:e|ed|ing)|eliminat(?:e|ed|ing)|prevent(?:s|ed|ing)?)\\b.*?\\b(?:code|logic)\\s+(?:de)?duplication\\b`,
+  'i',
+);
+
+const DEDUPLICATION_INTENT_RE = new RegExp(
+  `\\b(?:deduplicat(?:e|ed|ing|ion))\\b.*?\\b${INTERNAL_OR_REUSE_CONTEXT}\\b|` +
+    `\\b${INTERNAL_OR_REUSE_CONTEXT}\\b.*?\\b(?:deduplicat(?:e|ed|ing|ion))\\b`,
+  'i',
+);
+
+function isInternalHelperOrReuseTitle(rawTitle: string): boolean {
+  const core = semanticTitleCore(rawTitle);
+  if (/^(?:fix(?:es|ed|ing)?|patch(?:es|ed|ing)?)\b/i.test(core)) {
+    return false;
+  }
+  return (
+    ADD_INTERNAL_HELPER_RE.test(core) ||
+    ADD_HELPER_FUNCTION_RE.test(core) ||
+    ADD_HELPER_TO_DEDUPLICATE_OR_REUSE_RE.test(core) ||
+    ADD_HELPER_FOR_REUSE_RE.test(core) ||
+    EXTRACT_HELPER_OR_LOGIC_RE.test(core) ||
+    EXTRACT_FUNCTION_OR_LOGIC_RE.test(core) ||
+    REUSE_LOGIC_RE.test(core) ||
+    REDUCE_DUPLICATION_RE.test(core) ||
+    DEDUPLICATION_INTENT_RE.test(core)
+  );
+}
+
 function isImplicitFixTitle(rawTitle: string): boolean {
   const core = semanticTitleCore(rawTitle);
   const mentionsType = TYPE_INTENT_INDICATORS.some((keyword) =>
@@ -203,6 +262,9 @@ export function classifyTitleDeterministically(
   }
   if (isImplicitFixTitle(rawTitle)) {
     return { category: SECTION_FIXED, signal: 'strong-semantic' };
+  }
+  if (isInternalHelperOrReuseTitle(rawTitle)) {
+    return { category: SECTION_CHANGED, signal: 'strong-semantic' };
   }
 
   const scores = scoreCategories(rawTitle);

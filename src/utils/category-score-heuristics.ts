@@ -31,6 +31,7 @@ import {
 } from '@/constants/category-scoring.js';
 import {
   BUMP_OR_UPGRADE_RE,
+  COMBO_ADD_HELPER_OR_REUSE_RE,
   COMBO_ADD_TO_IMPROVE_RE,
   COMBO_FIX_BY_ADDING_RE,
   COMBO_REMOVE_WITHOUT_REPLACEMENT_RE,
@@ -138,7 +139,10 @@ export function applyComboHeuristics(
   scores: CategoryScores,
   normalizedTitle: string,
 ): void {
-  if (COMBO_ADD_TO_IMPROVE_RE.test(normalizedTitle)) {
+  if (
+    COMBO_ADD_TO_IMPROVE_RE.test(normalizedTitle) ||
+    COMBO_ADD_HELPER_OR_REUSE_RE.test(normalizedTitle)
+  ) {
     scores[SECTION_ADDED] += WEAK_KEYWORD_WEIGHT;
     scores[SECTION_CHANGED] += WEIGHT.strong.default;
   }

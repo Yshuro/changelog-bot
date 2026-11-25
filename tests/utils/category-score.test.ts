@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { describe, test, expect } from '@jest/globals';
 import { scoreCategories, bestCategory } from '@/utils/category-score.js';
+import { COMBO_ADD_HELPER_OR_REUSE_RE } from '@/constants/scoring.js';
 
 describe('category-score', () => {
   test('improve classification favors Changed', () => {
@@ -8,6 +9,17 @@ describe('category-score', () => {
     const s = scoreCategories(title);
     expect(s.Changed).toBeGreaterThan(s.Added);
     expect(bestCategory(s)).toBe('Changed');
+  });
+
+  test.each([
+    'add helper function to avoid duplication',
+    'add helper function to reduce duplication',
+    'add helper function to remove duplicate checks',
+    'add helper function to eliminate repeated parsing',
+    'add helper function to deduplicate tags',
+    'add helper function to prevent repeated lookups',
+  ])('COMBO_ADD_HELPER_OR_REUSE_RE matches "%s"', (title) => {
+    expect(COMBO_ADD_HELPER_OR_REUSE_RE.test(title)).toBe(true);
   });
 
   test('feat adds goes to Added', () => {

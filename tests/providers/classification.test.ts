@@ -75,6 +75,55 @@ describe('classifyChangesWithFallback', () => {
     });
   });
 
+  test('overrides provider Added assignment for internal helper addition (#325 regression)', async () => {
+    const result = await classifyChangesWithFallback({
+      changes: [
+        {
+          id: 'release-note:325',
+          title:
+            'added a little helper function to avoid deduplication in metadata di…',
+        },
+      ],
+      hasApiKey: true,
+      request: async () => JSON.stringify({ 'release-note:325': 'Added' }),
+      invalidResponseMessage: 'Invalid response',
+    });
+
+    expect(result).toEqual({
+      assignments: { 'release-note:325': 'Changed' },
+      diagnostics: [],
+    });
+  });
+
+  test.each([
+    'add deduplication support for release notes',
+    'add code duplication detection',
+    'add a code duplication report to the CLI',
+    'add code deduplication detection to the CLI',
+    'add a code deduplication report to the CLI',
+    'add deduplication support for code blocks',
+  ])(
+    'preserves provider Added assignment for legitimate deduplication feature "%s"',
+    async (title) => {
+      const result = await classifyChangesWithFallback({
+        changes: [
+          {
+            id: 'release-note:400',
+            title,
+          },
+        ],
+        hasApiKey: true,
+        request: async () => JSON.stringify({ 'release-note:400': 'Added' }),
+        invalidResponseMessage: 'Invalid response',
+      });
+
+      expect(result).toEqual({
+        assignments: { 'release-note:400': 'Added' },
+        diagnostics: [],
+      });
+    },
+  );
+
   test('falls back when the provider request fails', async () => {
     const result = await classifyChangesWithFallback({
       changes,

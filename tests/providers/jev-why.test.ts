@@ -614,4 +614,50 @@ describe('JevWhyExtractor', () => {
     expect(throttledResponseSignal?.aborted).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  test('falls back to default backoff when Retry-After date is invalid (NaN)', async () => {
+    jest.useFakeTimers();
+    const fetchMock = jest
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response('Request throttled', {
+          status: 429,
+          headers: { 'Retry-After': 'not-a-valid-date' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            model: 'jev-latest',
+            answers: {
+              pr_123_candidate_0_is_explicit_why: {
+                type: 'noul',
+                noul: 0.42,
+              },
+              pr_123_candidate_0_matches_change: { type: 'noul', noul: 0.91 },
+              pr_123_candidate_1_is_explicit_why: {
+                type: 'noul',
+                noul: 0.91,
+              },
+              pr_123_candidate_1_matches_change: { type: 'noul', noul: 0.91 },
+            },
+            usage: { input_tokens: 123, output_tokens: 4 },
+          }),
+        ),
+      );
+    global.fetch = fetchMock;
+    const extractor = new JevWhyExtractor({
+      apiKey: 'typesafe-test',
+      model: 'jev-latest',
+    });
+
+    const extraction = extractor.extractWhyNotes(WHY_INPUT);
+
+    await jest.advanceTimersByTimeAsync(249);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await jest.advanceTimersByTimeAsync(1);
+
+    await expect(extraction).resolves.toEqual(expect.any(Object));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });

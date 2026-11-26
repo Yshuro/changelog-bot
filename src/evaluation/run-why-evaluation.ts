@@ -30,7 +30,7 @@ import type {
   WhyExtractor,
 } from '@/types/why-extractor.js';
 import { providerFactory } from '@/utils/provider.js';
-import { isError } from '@/utils/is.js';
+import { isError, isNaN } from '@/utils/is.js';
 
 const DEFAULT_RUNS_COUNT = 1;
 const DEFAULT_OUTPUT_DIRECTORY = 'evaluations/reports';
@@ -50,12 +50,12 @@ export function parseEvaluationRuns(): number {
   const envRuns = process.env.WHY_EVALUATION_RUNS;
   if (envRuns) {
     const parsedRuns = parseInt(envRuns, 10);
-    if (!Number.isNaN(parsedRuns) && parsedRuns > 0) return parsedRuns;
+    if (!isNaN(parsedRuns) && parsedRuns > 0) return parsedRuns;
   }
   const flagIndex = process.argv.indexOf('--runs');
   if (flagIndex !== -1 && process.argv[flagIndex + 1]) {
     const parsedFlagRuns = parseInt(process.argv[flagIndex + 1], 10);
-    if (!Number.isNaN(parsedFlagRuns) && parsedFlagRuns > 0) {
+    if (!isNaN(parsedFlagRuns) && parsedFlagRuns > 0) {
       return parsedFlagRuns;
     }
   }

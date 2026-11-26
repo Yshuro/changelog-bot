@@ -20,6 +20,7 @@ import type {
   WhySelectionDiagnostic,
 } from '@/types/why.js';
 import { combinedWhyCandidateProbability } from '@/utils/why-candidate-probability.js';
+import { isNaN } from '@/utils/is.js';
 
 const TYPESAFE_SYSTEM_ONE_URL = 'https://api.typesafe.ai/v1/systemone';
 const TYPESAFE_RETRYABLE_STATUS_CODES = new Set([429, 529]);
@@ -105,7 +106,7 @@ function retryAfterDelay(retryAfterHeader: string | null): number | undefined {
     delay = Number(normalizedHeader) * MILLISECONDS_PER_SECOND;
   } else {
     const retryAt = Date.parse(normalizedHeader);
-    if (Number.isNaN(retryAt)) return undefined;
+    if (isNaN(retryAt)) return undefined;
     delay = Math.max(0, retryAt - Date.now());
   }
 

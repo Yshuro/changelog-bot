@@ -20,12 +20,12 @@ function extractHttpStatus(errorCandidate: unknown): number | undefined {
 }
 
 function parsePositiveNumber(value: unknown): number | undefined {
-  if (isNumber(value) && Number.isFinite(value) && value >= 0) {
+  if (isNumber(value) && value >= 0) {
     return value;
   }
   if (isString(value)) {
     const parsed = Number(value);
-    if (Number.isFinite(parsed) && parsed >= 0) {
+    if (isNumber(parsed) && parsed >= 0) {
       return parsed;
     }
   }

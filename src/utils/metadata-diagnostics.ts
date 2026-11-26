@@ -3,6 +3,7 @@ import type {
   MetadataLookupFailureReason,
   MetadataLookupResult,
 } from '@/types/github.js';
+import { isFunction } from '@/utils/is.js';
 
 const METADATA_LOOKUP_FAILURE_REASONS: readonly MetadataLookupFailureReason[] =
   [
@@ -61,10 +62,9 @@ export function recordMetadataLookupOutcome<ResultType>(
   targetDiagnostics.degradedLookups += 1;
   targetDiagnostics.failureCounts[lookupResult.status] += 1;
   if (fallbackReason) {
-    const formattedReason =
-      typeof fallbackReason === 'function'
-        ? fallbackReason(lookupResult.status)
-        : fallbackReason;
+    const formattedReason = isFunction(fallbackReason)
+      ? fallbackReason(lookupResult.status)
+      : fallbackReason;
     if (formattedReason) {
       addFallbackReason(targetDiagnostics, formattedReason);
     }

@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { test, expect, describe } from '@jest/globals';
 import {
+  isFunction,
   isNullable,
   isRecord,
   isString,
@@ -54,6 +55,17 @@ describe('is utilities', () => {
     expect(isNumber(Infinity)).toBe(false);
     expect(isNumber('1')).toBe(false);
     expect(isNumber(123)).toBe(true);
+  });
+
+  test('isFunction', () => {
+    expect(isFunction(() => {})).toBe(true);
+    expect(isFunction(function named() {})).toBe(true);
+    expect(isFunction(class Sample {})).toBe(true);
+    expect(isFunction({})).toBe(false);
+    expect(isFunction('fn')).toBe(false);
+    expect(isFunction(123)).toBe(false);
+    expect(isFunction(null)).toBe(false);
+    expect(isFunction(undefined)).toBe(false);
   });
 
   test('isReasoningModel', () => {

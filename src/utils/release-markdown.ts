@@ -207,28 +207,20 @@ export function collectReleasePreamble(body: string): string[] {
  * @returns Body with nested headings adjusted while code fences remain intact.
  */
 export function demoteAdditionalSectionHeadings(body: string): string {
-  let inFence = false;
-  let fenceMarker: string | undefined;
+  let openFence: OpenCodeFence | undefined;
 
   return body
     .split('\n')
     .map((rawLine) => {
-      const line = inFence ? rawLine : normalizeReleaseHeadingLine(rawLine);
-      const fenceMatch = line.match(/^\s*(```|~~~)/);
-      if (fenceMatch) {
-        const marker = fenceMatch[FENCE_MARKER_MATCH_INDEX];
-        if (!inFence) {
-          inFence = true;
-          fenceMarker = marker;
-        } else if (marker === fenceMarker) {
-          inFence = false;
-          fenceMarker = undefined;
-        }
-        return line;
+      const fenceStep = trackCodeFence(rawLine, openFence);
+      // WHY: Share the fence rules of collectReleaseH2Sections, so a shorter
+      // run such as ``` inside a ```` block is example content, not a close.
+      if (openFence || fenceStep.isDelimiter) {
+        openFence = fenceStep.openFence;
+        return rawLine;
       }
 
-      if (inFence) return line;
-
+      const line = normalizeReleaseHeadingLine(rawLine);
       const headingMatch = line.match(ATX_HEADING_RE);
       if (!headingMatch) return line;
 

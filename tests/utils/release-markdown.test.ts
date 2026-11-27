@@ -98,6 +98,80 @@ describe('demoteAdditionalSectionHeadings', () => {
     expect(out).toBe(['```', '~~~', '# still fenced', '```', '#### outside'].join('\n'));
   });
 
+  test.each([
+    ['```'],
+    ['````'],
+    ['`````'],
+    ['~~~'],
+    ['~~~~'],
+    ['~~~~~'],
+  ])('keeps headings inside a %s fence unchanged', (fence) => {
+    const body = ['## Before', fence, '# fenced', '## fenced', fence, '# After'].join('\n');
+
+    const out = demoteAdditionalSectionHeadings(body);
+
+    expect(out).toBe(
+      ['#### Before', fence, '# fenced', '## fenced', fence, '#### After'].join('\n'),
+    );
+  });
+
+  test.each([
+    ['````', '```'],
+    ['`````', '````'],
+    ['~~~~', '~~~'],
+    ['~~~~~', '~~~~'],
+  ])('a %s fence is not closed by a shorter %s run', (fence, shorter) => {
+    const body = [fence, shorter, '## still fenced', shorter, fence, '## After'].join('\n');
+
+    const out = demoteAdditionalSectionHeadings(body);
+
+    expect(out).toBe([fence, shorter, '## still fenced', shorter, fence, '#### After'].join('\n'));
+  });
+
+  test('keeps a nested markdown example intact', () => {
+    const body = [
+      '````markdown',
+      '### Example heading',
+      '',
+      '```typescript',
+      'const value = 1;',
+      '```',
+      '````',
+      '### Real heading',
+    ].join('\n');
+
+    const out = demoteAdditionalSectionHeadings(body);
+
+    expect(out).toBe(
+      [
+        '````markdown',
+        '### Example heading',
+        '',
+        '```typescript',
+        'const value = 1;',
+        '```',
+        '````',
+        '#### Real heading',
+      ].join('\n'),
+    );
+  });
+
+  test('a longer closing run closes a shorter fence', () => {
+    const body = ['```', '# fenced', '`````', '# outside'].join('\n');
+
+    const out = demoteAdditionalSectionHeadings(body);
+
+    expect(out).toBe(['```', '# fenced', '`````', '#### outside'].join('\n'));
+  });
+
+  test('a run with an info string does not close a fence', () => {
+    const body = ['```', '```ts', '# still fenced', '```', '# outside'].join('\n');
+
+    const out = demoteAdditionalSectionHeadings(body);
+
+    expect(out).toBe(['```', '```ts', '# still fenced', '```', '#### outside'].join('\n'));
+  });
+
   test('normalizes prefixed heading lines before demoting', () => {
     const out = demoteAdditionalSectionHeadings('!!## Section');
 

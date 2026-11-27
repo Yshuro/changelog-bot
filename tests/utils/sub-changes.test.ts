@@ -276,3 +276,76 @@ describe('detectPrSubChangesFromCommits suppression and deduplication rules', ()
     ]);
   });
 });
+
+describe('detectPrSubChangesFromCommits case-insensitive type and scope matching', () => {
+  test('treats scopes differing only in capitalization as the same slot and prevents expansion', () => {
+    const result = detectPrSubChangesFromCommits(300, 'API input handling', [
+      { sha: 'c1', subject: 'fix(API): handle invalid input' },
+      { sha: 'c2', subject: 'fix(api): handle missing field' },
+    ]);
+
+    expect(result).toBeNull();
+  });
+
+  test.each([
+    ['FEAT', 'feat'],
+    ['FIX', 'fix'],
+    ['Perf', 'perf'],
+  ])(
+    'treats accepted Conventional Commit types %s and %s as the same slot',
+    (upperType, lowerType) => {
+      const result = detectPrSubChangesFromCommits(
+        301,
+        'Multiple updates in same slot',
+        [
+          { sha: 'c1', subject: `${upperType}(core): add primary handler` },
+          { sha: 'c2', subject: `${lowerType}(core): add secondary handler` },
+        ],
+      );
+
+      expect(result).toBeNull();
+    },
+  );
+
+  test('treats both type and scope differing in capitalization as the same slot', () => {
+    const result = detectPrSubChangesFromCommits(302, 'Auth fixes', [
+      { sha: 'c1', subject: 'FIX(Auth): validate token expiry' },
+      { sha: 'c2', subject: 'fix(auth): reject malformed bearer header' },
+    ]);
+
+    expect(result).toBeNull();
+  });
+
+  test('allows expansion for distinct normalized type/scope slots and preserves original commit order', () => {
+    const result = detectPrSubChangesFromCommits(
+      303,
+      'API, auth and database improvements',
+      [
+        { sha: 'c1', subject: 'FEAT(API): add bulk export endpoint' },
+        { sha: 'c2', subject: 'fix(api): handle invalid input' },
+        { sha: 'c3', subject: 'Perf(DB): batch export queries' },
+      ],
+    );
+
+    expect(result).toEqual([
+      {
+        subIndex: 1,
+        title: 'add bulk export endpoint',
+        rawTitle: 'FEAT(API): add bulk export endpoint',
+        commitSha: 'c1',
+      },
+      {
+        subIndex: 2,
+        title: 'handle invalid input',
+        rawTitle: 'fix(api): handle invalid input',
+        commitSha: 'c2',
+      },
+      {
+        subIndex: 3,
+        title: 'batch export queries',
+        rawTitle: 'Perf(DB): batch export queries',
+        commitSha: 'c3',
+      },
+    ]);
+  });
+});

@@ -194,3 +194,120 @@ describe('buildReleaseDraft intro', () => {
     expect(section.match(/We're excited/g)).toHaveLength(1);
   });
 });
+
+describe('release intro CRLF and whitespace preservation', () => {
+  test('parses LF and CRLF release notes equivalently while preserving paragraph boundaries', () => {
+    const lfBody = INTRO_BODY;
+    const crlfBody = lfBody.replace(/\n/g, '\r\n');
+
+    const lfParsed = parseReleaseNotes(lfBody, {
+      owner: 'acme',
+      repo: 'tool',
+    });
+    const crlfParsed = parseReleaseNotes(crlfBody, {
+      owner: 'acme',
+      repo: 'tool',
+    });
+
+    expect(lfParsed.intro).toBe(EXPECTED_INTRO);
+    expect(crlfParsed.intro).toBe(EXPECTED_INTRO);
+    expect(crlfParsed.intro).toBe(lfParsed.intro);
+    expect(crlfParsed.intro?.split('\n\n')).toHaveLength(2);
+  });
+
+  test('normalizes leading and trailing blank lines around the intro for LF and CRLF', () => {
+    const lfBody = [
+      '',
+      '',
+      "We're excited to release v0.12.0! See the [guide](https://example.com/guide).",
+      '',
+      'This is our **biggest** release yet.',
+      '',
+      '',
+      "## What's Changed",
+      '- feat: add audience option by @alice in https://github.com/acme/tool/pull/10',
+    ].join('\n');
+    const crlfBody = lfBody.replace(/\n/g, '\r\n');
+
+    expect(parseReleaseNotes(lfBody).intro).toBe(EXPECTED_INTRO);
+    expect(parseReleaseNotes(crlfBody).intro).toBe(EXPECTED_INTRO);
+  });
+
+  test('preserves intro before categories and keeps additional sections intact across buildReleaseDraft and buildSectionFromRelease with CRLF', () => {
+    const lfBody = [
+      "We're excited to release v0.12.0! See the [guide](https://example.com/guide).",
+      '',
+      'This is our **biggest** release yet.',
+      '',
+      "## What's Changed",
+      '- feat: add audience option by @alice in https://github.com/acme/tool/pull/10',
+      '',
+      '## Upgrade notes',
+      'Run the migration.',
+      '',
+      'Verify config.',
+    ].join('\n');
+    const crlfBody = lfBody.replace(/\n/g, '\r\n');
+
+    const lfDraft = buildReleaseDraft({
+      version: '0.12.0',
+      date: '2026-11-19',
+      releaseBody: lfBody,
+      commitList: [],
+      owner: 'acme',
+      repo: 'tool',
+    });
+    const crlfDraft = buildReleaseDraft({
+      version: '0.12.0',
+      date: '2026-11-19',
+      releaseBody: crlfBody,
+      commitList: [],
+      owner: 'acme',
+      repo: 'tool',
+    });
+
+    const lfSection = buildSectionFromRelease(lfDraft);
+    const crlfSection = buildSectionFromRelease(crlfDraft);
+
+    expect(crlfSection).toBe(lfSection);
+    expect(crlfSection.indexOf(EXPECTED_INTRO)).toBeGreaterThan(
+      crlfSection.indexOf('## [v0.12.0] - 2026-11-19'),
+    );
+    expect(crlfSection.indexOf(EXPECTED_INTRO)).toBeLessThan(
+      crlfSection.indexOf('### Added'),
+    );
+    expect(crlfSection).toContain(
+      '### Upgrade notes\n\nRun the migration.\n\nVerify config.',
+    );
+  });
+
+  test('does not alter generated output when intro is absent in CRLF input', () => {
+    const lfBody = [
+      "## What's Changed",
+      '- feat: add audience option by @alice in https://github.com/acme/tool/pull/10',
+    ].join('\n');
+    const crlfBody = lfBody.replace(/\n/g, '\r\n');
+
+    const lfDraft = buildReleaseDraft({
+      version: '0.12.0',
+      date: '2026-11-19',
+      releaseBody: lfBody,
+      commitList: [],
+      owner: 'acme',
+      repo: 'tool',
+    });
+    const crlfDraft = buildReleaseDraft({
+      version: '0.12.0',
+      date: '2026-11-19',
+      releaseBody: crlfBody,
+      commitList: [],
+      owner: 'acme',
+      repo: 'tool',
+    });
+
+    expect(crlfDraft.intro).toBeUndefined();
+    expect(buildSectionFromRelease(crlfDraft)).toBe(
+      buildSectionFromRelease(lfDraft),
+    );
+  });
+});

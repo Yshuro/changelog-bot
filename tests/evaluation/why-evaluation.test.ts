@@ -1,5 +1,5 @@
 import { runInNewContext } from 'node:vm';
-import { jest, describe, expect, test } from '@jest/globals';
+import { afterEach, jest, describe, expect, test } from '@jest/globals';
 
 import { WHY_EVALUATION_CORPUS } from '@/evaluation/why-corpus.js';
 import {
@@ -7,7 +7,10 @@ import {
   evaluateWhySelections,
 } from '@/evaluation/why-evaluation.js';
 import type { WhyEvaluationCase } from '@/evaluation/why-evaluation.js';
-import { evaluateEngineWithRepeatedRuns } from '@/evaluation/run-why-evaluation.js';
+import {
+  evaluateEngineWithRepeatedRuns,
+  parseEvaluationRuns,
+} from '@/evaluation/run-why-evaluation.js';
 import type { WhyExtractor } from '@/types/why-extractor.js';
 
 const CASES: WhyEvaluationCase[] = [
@@ -902,4 +905,36 @@ describe('evaluateEngineWithRepeatedRuns', () => {
     expect(report.latency).toBeDefined();
     expect(mockExtractor.extractWhyNotes).toHaveBeenCalledTimes(2);
   });
+});
+
+describe('parseEvaluationRuns', () => {
+  const originalEnvRuns = process.env.WHY_EVALUATION_RUNS;
+  const originalArgv = [...process.argv];
+
+  afterEach(() => {
+    if (originalEnvRuns === undefined) {
+      delete process.env.WHY_EVALUATION_RUNS;
+    } else {
+      process.env.WHY_EVALUATION_RUNS = originalEnvRuns;
+    }
+    process.argv = [...originalArgv];
+  });
+
+  test('returns valid positive run counts from env or --runs flag', () => {
+    process.env.WHY_EVALUATION_RUNS = '4';
+    process.argv = ['node', 'script.js', '--runs', '2'];
+    expect(parseEvaluationRuns()).toBe(4);
+
+    delete process.env.WHY_EVALUATION_RUNS;
+    expect(parseEvaluationRuns()).toBe(2);
+  });
+
+  test.each(['abc', 'NaN', '0', '-3'])(
+    'ignores invalid run count %s and falls back safely',
+    (invalidValue) => {
+      process.env.WHY_EVALUATION_RUNS = invalidValue;
+      process.argv = ['node', 'script.js', '--runs', invalidValue];
+      expect(parseEvaluationRuns()).toBe(1);
+    },
+  );
 });

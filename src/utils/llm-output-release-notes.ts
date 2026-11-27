@@ -31,7 +31,7 @@ import {
   buildPrUrl,
   resolvePrFromTitles,
 } from '@/utils/llm-output-common.js';
-import { isError } from '@/utils/is.js';
+import { isError, isInstanceOf } from '@/utils/is.js';
 import type {
   ExcludedReleaseChange,
   ReleaseChange,
@@ -40,6 +40,10 @@ import type {
 import type { CategoryAssignments } from '@/types/changelog.js';
 import { validateReleaseResult } from '@/utils/release-validation.js';
 import { filterReleaseDraftByAudience } from '@/utils/audience-filter.js';
+
+const isIncompleteClassificationError = isInstanceOf(
+  IncompleteClassificationError,
+);
 
 /**
  * Fill missing PR numbers/URLs/authors for release note items when possible.
@@ -213,7 +217,7 @@ export async function buildOutputFromReleaseNotes(
       // Mark AI usage only when classification had input and a provider key is available.
       aiUsed = aiUsed || hasProviderKey;
     } catch (err) {
-      if (err instanceof IncompleteClassificationError && !failOnLlmError) {
+      if (isIncompleteClassificationError(err) && !failOnLlmError) {
         const partialAssignments = applyDeterministicClassification(
           releaseChanges,
           err.result.assignments,

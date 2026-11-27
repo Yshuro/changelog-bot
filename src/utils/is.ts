@@ -2,6 +2,7 @@ import {
   arrayOf as createArrayOfGuard,
   isArray as isArrayValue,
   isError as isErrorValue,
+  isFunction as isFunctionValue,
   isInstanceOf as createInstanceGuard,
   isNaN as isNaNValue,
   isNil,
@@ -40,6 +41,13 @@ export const isArray = isArrayValue;
  * @returns True for Error instances or values with the built-in Error object tag.
  */
 export const isError = isErrorValue;
+
+/**
+ * Determine whether a value is a function.
+ * @param value Unknown candidate.
+ * @returns True when the value is callable.
+ */
+export const isFunction = isFunctionValue;
 
 /**
  * Determine whether a value is the numeric NaN value without coercion.

@@ -515,8 +515,24 @@ describe('classifyGithubError retry-after extraction (alternate shapes)', () => 
       },
     ],
     [
+      'negative Infinity number',
+      {
+        status: 429,
+        message: 'Too Many Requests',
+        retryAfter: Number.NEGATIVE_INFINITY,
+      },
+    ],
+    [
+      'Infinity string',
+      { status: 429, message: 'Too Many Requests', retryAfter: 'Infinity' },
+    ],
+    [
       'negative-infinity string',
       { status: 429, message: 'Too Many Requests', retryAfter: '-Infinity' },
+    ],
+    [
+      'NaN string',
+      { status: 429, message: 'Too Many Requests', retryAfter: 'NaN' },
     ],
     [
       'non-numeric string',
